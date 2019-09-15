@@ -1,6 +1,7 @@
 package com.zt.controller;
 
 import com.netflix.hystrix.HystrixCommandGroupKey;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 import com.zt.api.UserHystrixCommand;
 import com.zt.api.UserService;
 import com.zt.domain.UserDomain;
@@ -27,11 +28,12 @@ public class FiegnConsumerController {
         return userService.queryUserListById(userId);
     }
 
- /*   @RequestMapping(value = "/query/{user}")
-    public UserDomain queryUserInfo(@PathVariable("user") UserDomain userDomain){
-        return userService.queryUser(userDomain);
-    }*/
 
+    /**
+     * 手动实现服务降级
+     * @param id
+     * @return
+     */
     @RequestMapping(value = "/hystrix/{hystrix}")
     public Object hystrixTest(@PathVariable("hystrix") Integer id){
         HystrixCommandGroupKey hystrixCommandGroupKey=new HystrixCommandGroupKey() {
@@ -42,6 +44,25 @@ public class FiegnConsumerController {
         };
         UserHystrixCommand userHystrixCommand=new UserHystrixCommand(hystrixCommandGroupKey,id,userService);
         return userHystrixCommand.execute();
+    }
+
+    /**
+     * 通过注解实现服务降级
+     * @param userId
+     * @return
+     */
+    @RequestMapping(value = "/hystrixAnno/{userId}")
+    @HystrixCommand(fallbackMethod = "queryUserFallBack")
+    public Object hystrixAnnotation(@PathVariable("userId") Integer userId){
+        return userService.queryUserListById(userId);
+    }
+
+    protected Object queryUserFallBack(Integer userId){
+        UserDomain userDomain=new UserDomain();
+        userDomain.setAge(-1);
+        userDomain.setUserId(-1);
+        userDomain.setUserName("服务降级");
+        return userDomain;
     }
 
 }
